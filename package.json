@@ -1,6 +1,6 @@
 {
 	"name": "thindb",
-	"version": "1.0.0",
+	"version": "1.0.2",
 	"description": "通用数据库连接和操作组件，如mysql、redis等",
 	"main": "index.js",
 	"scripts": {
