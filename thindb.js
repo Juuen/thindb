@@ -9,6 +9,7 @@ class thindb {
 		this.connections = connections || [];
 	}
 
+	// mysql
 	mysql = {
 		DEFAULT_CONFIGS: { multipleStatements: true },
 		DEFAULT_CMD: "select ? into @jdata;call ??(?,@jdata);select @jdata as jdata;",
@@ -21,12 +22,11 @@ class thindb {
 			});
 		},
 		ddd: (poolName) => {
+			!global.ddd_mysql_pool && this.mysql.connect();
+			poolName ||= Object.getOwnPropertyNames(global.ddd_mysql_pool)[0];
+			let pool = global.ddd_mysql_pool[poolName];
 			let ddd_mysql = {
 				exePromise: (p, dddMode = true) => {
-					!global.ddd_mysql_pool && this.mysql.connect();
-					poolName ||= Object.getOwnPropertyNames(global.ddd_mysql_pool)[0];
-					let pool = global.ddd_mysql_pool[poolName];
-
 					return new Promise((resolve, reject) => {
 						let cmd = dddMode ? this.mysql.DEFAULT_CMD : p.sp,
 							data = dddMode ? [JSON.stringify(p.data), p.sp, JSON.stringify(p.token)] : p.data;
@@ -49,8 +49,10 @@ class thindb {
 		}
 	};
 
+	// redis
 	redis() {}
 
+	// 获取数据连接配置
 	__getDbConfig(dbType) {
 		let dbConfig = [];
 		Array.isArray(this.connections) &&
@@ -61,6 +63,7 @@ class thindb {
 		return dbConfig;
 	}
 
+	// 数据库类型（枚举对象）
 	dbTypes = {
 		mysql: "mysql",
 		redis: "redis"
