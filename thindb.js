@@ -47,9 +47,9 @@ class thindb {
 								if (err) reject({ err_code: err.errno, err_message: err.sqlMessage });
 								else if (_dddMode) {
 									let res = rows.pop();
-									resolve(res[0]?.jdata || {});
+									resolve(JSON.parse(res[0]?.jdata || {}));
 								} else {
-									resolve(rows);
+									resolve(JSON.parse(rows));
 								}
 							});
 						else reject({ err_code: 999, err_message: "未匹配到数据库连接配置,请检查配置文件！" });

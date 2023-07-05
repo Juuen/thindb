@@ -1,6 +1,6 @@
 {
 	"name": "thindb",
-	"version": "1.0.8",
+	"version": "1.0.10",
 	"description": "NODEJS通用数据库访问和操作组件，如mysql、redis等",
 	"main": "thindb.js",
 	"scripts": {
@@ -12,6 +12,10 @@
 		"mysql",
 		"redis"
 	],
+	"homepage": "https://github.com/Juuen/thindb#readme",
+	"engines": {
+		"node": ">=15.0.0"
+	},
 	"license": "ISC",
 	"dependencies": {
 		"mysql2": "^3.4.2"
