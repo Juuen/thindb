@@ -36,7 +36,7 @@ class thindb {
 			poolName ||= Object.getOwnPropertyNames(global.ddd_mysql_pool)[0];
 			let pool = global.ddd_mysql_pool[poolName];
 			let ddd_mysql = {
-				exePromise: (p, dddMode) => {
+				execPromise: (p, dddMode) => {
 					return new Promise((resolve, reject) => {
 						let _dddMode = dddMode ?? options.dddMode ?? true,
 							cmd = _dddMode ? this.mysql.DEFAULT_CMD : p.sp,

@@ -1,8 +1,8 @@
 {
 	"name": "thindb",
-	"version": "1.0.6",
+	"version": "1.0.8",
 	"description": "NODEJS通用数据库访问和操作组件，如mysql、redis等",
-	"main": "index.js",
+	"main": "thindb.js",
 	"scripts": {
 		"test": "echo \"Error: no test specified\" && exit 1"
 	},
