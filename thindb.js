@@ -1,4 +1,5 @@
 const db_mysql = require("mysql2");
+const db_redis = require("redis");
 
 class thindb {
 	/**
@@ -17,12 +18,14 @@ class thindb {
 		 * 建立数据访问连接池
 		 */
 		connect: () => {
-			if (!global.ddd_mysql_pool) global.ddd_mysql_pool = {};
-			let mysqlConfigs = this.__getDbConfig(this.dbTypes.mysql);
-			mysqlConfigs?.forEach((cfg) => {
-				let connName = cfg.database;
-				if (!global.ddd_mysql_pool[connName]) global.ddd_mysql_pool[connName] = db_mysql.createPool({ ...this.mysql.DEFAULT_CONFIGS, ...cfg });
-			});
+			if (!global.ddd_mysql_pool) {
+				global.ddd_mysql_pool = {};
+				let mysqlConfigs = this.__getDbConfig(this.dbTypes.mysql);
+				mysqlConfigs?.forEach((cfg) => {
+					let connName = cfg.database;
+					if (!global.ddd_mysql_pool[connName]) global.ddd_mysql_pool[connName] = db_mysql.createPool({ ...this.mysql.DEFAULT_CONFIGS, ...cfg });
+				});
+			}
 		},
 		/**
 		 * DDD数据访问对象
@@ -32,7 +35,7 @@ class thindb {
 		 * @returns
 		 */
 		ddd: (poolName, options = {}) => {
-			!global.ddd_mysql_pool && this.mysql.connect();
+			this.mysql.connect();
 			poolName ||= Object.getOwnPropertyNames(global.ddd_mysql_pool)[0];
 			let pool = global.ddd_mysql_pool[poolName];
 			let ddd_mysql = {
@@ -45,11 +48,18 @@ class thindb {
 						if (pool)
 							pool.query(cmd, data, (err, rows, fields) => {
 								if (err) reject({ err_code: err.errno, err_message: err.sqlMessage });
-								else if (_dddMode) {
-									let res = rows.pop();
-									resolve(JSON.parse(res[0]?.jdata || {}));
-								} else {
-									resolve(JSON.parse(rows));
+								else {
+									let result = rows;
+									try {
+										if (_dddMode) {
+											result = rows.pop();
+											result = JSON.parse(result[0]?.jdata || {});
+										}
+										resolve(result);
+									} catch (e) {
+										console.error("[JSON PARSE]: ", e.message, " \r\n[MYSQL RESULT]: ", result);
+										reject({ err_code: 500, err_message: e.message });
+									}
 								}
 							});
 						else reject({ err_code: 999, err_message: "未匹配到数据库连接配置,请检查配置文件！" });
@@ -62,11 +72,74 @@ class thindb {
 	};
 
 	// redis
-	redis() {}
+	redis = {
+		/**
+		 * 建立数据访问连接
+		 */
+		connect: () => {
+			if (!global.ddd_redis) {
+				global.ddd_redis = {};
+				let redisConfigs = this.__getDbConfig(this.dbTypes.redis);
+				redisConfigs?.forEach((cfg) => {
+					let connName = cfg.host;
+					if (!global.ddd_redis[connName]) {
+						global.ddd_redis[connName] = db_redis.createClient(cfg);
+						global.ddd_redis[connName].on("error", (err) => console.log("Redis Client Error", err));
+						global.ddd_redis[connName].on("connect", () => console.log("Redis Connected!"));
+					}
+				});
+			}
+		},
+		set: (key, value, connName) => {
+			return new Promise(async (resolve, reject) => {
+				try {
+					this.redis.connect();
+					connName ||= Object.getOwnPropertyNames(global.ddd_redis)[0];
+					await global.ddd_redis[connName].connect();
+					await global.ddd_redis[connName].set(key, value);
+					await global.ddd_redis[connName].disconnect();
+					resolve();
+				} catch (err) {
+					reject(err);
+				}
+			});
+		},
+		get: (key, connName) => {
+			return new Promise(async (resolve, reject) => {
+				try {
+					this.redis.connect();
+					let value;
+					connName ||= Object.getOwnPropertyNames(global.ddd_redis)[0];
+					await global.ddd_redis[connName].connect();
+					value = await global.ddd_redis[connName].get(key);
+					await global.ddd_redis[connName].disconnect();
+					resolve(value);
+				} catch (err) {
+					reject(err);
+				}
+			});
+		},
+		del: (key, connName) => {
+			return new Promise(async (resolve, reject) => {
+				try {
+					this.redis.connect();
+					let value;
+					connName ||= Object.getOwnPropertyNames(global.ddd_redis)[0];
+					await global.ddd_redis[connName].connect();
+					value = await global.ddd_redis[connName].del(key);
+					await global.ddd_redis[connName].disconnect();
+					resolve(value);
+				} catch (err) {
+					reject(err);
+				}
+			});
+		}
+	};
 
 	// 获取数据连接配置
 	__getDbConfig(dbType) {
-		let dbConfig =
+		let dbConfig = [];
+		dbConfig =
 			Array.isArray(this.connections) &&
 			this.connections.reduce((accumulator, item) => {
 				let conn = item[dbType];
