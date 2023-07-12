@@ -1,5 +1,5 @@
 const db_mysql = require("mysql2");
-const db_redis = require("redis");
+const db_redis = require("ioredis");
 
 class thindb {
 	/**
@@ -57,12 +57,12 @@ class thindb {
 										}
 										resolve(result);
 									} catch (e) {
-										console.error("[JSON PARSE]: ", e.message, " \r\n[MYSQL RESULT]: ", result);
+										console.error("[THINDB JSON PARSE]: ", e.message, " \r\n[THINDB MYSQL RESULT]: ", result);
 										reject({ err_code: 500, err_message: e.message });
 									}
 								}
 							});
-						else reject({ err_code: 999, err_message: "未匹配到数据库连接配置,请检查配置文件！" });
+						else reject({ err_code: 999, err_message: "[THINDB]未匹配到数据库连接配置,请检查配置文件！" });
 					});
 				}
 			};
@@ -73,66 +73,15 @@ class thindb {
 
 	// redis
 	redis = {
-		/**
-		 * 建立数据访问连接
-		 */
 		connect: () => {
 			if (!global.ddd_redis) {
-				global.ddd_redis = {};
 				let redisConfigs = this.__getDbConfig(this.dbTypes.redis);
-				redisConfigs?.forEach((cfg) => {
-					let connName = cfg.host;
-					if (!global.ddd_redis[connName]) {
-						global.ddd_redis[connName] = db_redis.createClient(cfg);
-						global.ddd_redis[connName].on("error", (err) => console.log("Redis Client Error", err));
-						global.ddd_redis[connName].on("connect", () => console.log("Redis Connected!"));
-					}
-				});
+				if (redisConfigs?.length) {
+					let config = redisConfigs[0];
+					global.ddd_redis = Array.isArray(config) ? new db_redis.Cluster(config) : new db_redis(config);
+				} else console.error("Thindb redis connection isn't configured!");
 			}
-		},
-		set: (key, value, connName) => {
-			return new Promise(async (resolve, reject) => {
-				try {
-					this.redis.connect();
-					connName ||= Object.getOwnPropertyNames(global.ddd_redis)[0];
-					await global.ddd_redis[connName].connect();
-					await global.ddd_redis[connName].set(key, value);
-					await global.ddd_redis[connName].disconnect();
-					resolve();
-				} catch (err) {
-					reject(err);
-				}
-			});
-		},
-		get: (key, connName) => {
-			return new Promise(async (resolve, reject) => {
-				try {
-					this.redis.connect();
-					let value;
-					connName ||= Object.getOwnPropertyNames(global.ddd_redis)[0];
-					await global.ddd_redis[connName].connect();
-					value = await global.ddd_redis[connName].get(key);
-					await global.ddd_redis[connName].disconnect();
-					resolve(value);
-				} catch (err) {
-					reject(err);
-				}
-			});
-		},
-		del: (key, connName) => {
-			return new Promise(async (resolve, reject) => {
-				try {
-					this.redis.connect();
-					let value;
-					connName ||= Object.getOwnPropertyNames(global.ddd_redis)[0];
-					await global.ddd_redis[connName].connect();
-					value = await global.ddd_redis[connName].del(key);
-					await global.ddd_redis[connName].disconnect();
-					resolve(value);
-				} catch (err) {
-					reject(err);
-				}
-			});
+			return global.ddd_redis;
 		}
 	};
 
