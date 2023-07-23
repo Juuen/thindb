@@ -47,7 +47,7 @@ class thindb {
 
 						if (pool)
 							pool.query(cmd, data, (err, rows, fields) => {
-								if (err) reject({ err_code: err.errno, err_message: err.sqlMessage });
+								if (err) reject({ err_code: err.errno || err.errorno, err_message: err.sqlMessage ? `[THINDB]${err.sqlMessage}` : `[THINDB]${err.syscall} ${err.code}` });
 								else {
 									let result = rows;
 									try {
